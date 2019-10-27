@@ -4,12 +4,40 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.Stream;
 
+/**
+ * WordCounter assumes that all words are alphabetical - numbers are not counted.
+ */
 public class WordCounter {
     private static String aplhabet = "abcdefghijklmnopqrstuvwxyz";
+    private static String defaultOutput = "C:\\output";
+
+    private static void createOutput(HashMap<Character, HashMap<String, Integer>> wordCounts) throws IOException {
+        // Maybe move this to start of the application?
+        if (Files.notExists(Paths.get(defaultOutput))) {
+            Files.createDirectory(Paths.get(defaultOutput));
+        }
+
+        var keys = wordCounts.keySet().toArray();
+        for (var key: keys) {
+            Path outputFile = Paths.get(defaultOutput, "file_" + key + ".txt");
+            var letterBox = wordCounts.get(key);
+            var words = letterBox.keySet().toArray();
+            if (words.length == 0) {
+                continue;
+            }
+            Files.writeString(outputFile, key.toString());
+            for (var word: words) {
+                var count = letterBox.get(word);
+                var output = String.format("%s %d\n", word, count);
+                Files.writeString(outputFile, output, StandardOpenOption.APPEND);
+            }
+        }
+    }
 
     /**
      * Function to read all files in a dir and return an arrayList of contents.
@@ -31,8 +59,16 @@ public class WordCounter {
      * @return contents as a string
      */
     private static String getFileContents(Path filename) {
-        return "Reading " + filename;
-
+        String fileContent = null;
+        try {
+            fileContent = Files.readString(filename);
+        } catch (IOException e) {
+            String error = String.format("Error while reading %s", filename);
+            System.out.println(error);
+            System.out.println(e.getMessage());
+            System.exit(1);
+        }
+        return fileContent;
     }
 
     /**
@@ -45,11 +81,30 @@ public class WordCounter {
         return input.replaceAll("[^a-z]", " ");
     }
 
-    public static void main(String[] args) {
+    private static HashMap<Character, HashMap<String, Integer>> countOccurrences(ArrayList<String> contents) {
         HashMap<Character, HashMap<String, Integer>> wordCounts = new HashMap<>();
         for (Character letter: aplhabet.toCharArray()) {
             wordCounts.put(letter, new HashMap<>());
         }
+        // Count occurrences
+        for (String content: contents) {
+            var temp = content.split("\\s+");
+            for (String word: temp) {
+
+                // In case file starts with whitespace
+                if (word.isEmpty()) {
+                    continue;
+                }
+                var firstLetter = word.charAt(0);
+                var letterBox = wordCounts.get(firstLetter);
+                var count = letterBox.getOrDefault(word, 0);
+                letterBox.put(word, count + 1);
+            }
+        }
+        return wordCounts;
+    }
+
+    public static void main(String[] args) {
         ArrayList<String> contents = null;
 
         // Read contents
@@ -67,16 +122,11 @@ public class WordCounter {
             contents.set(i, sanitizedContent);
         }
 
-        // Count occurrences
-        for (String content: contents) {
-            var temp = content.split("\\s+");
-            for (String word: temp) {
-                var firstLetter = word.charAt(0);
-                var letterBox = wordCounts.get(firstLetter);
-                var count = letterBox.getOrDefault(word, 0);
-                letterBox.put(word, count + 1);
-            }
+        var wordCounts = countOccurrences(contents);
+        try {
+            createOutput(wordCounts);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        System.out.println("Done.");
     }
 }
