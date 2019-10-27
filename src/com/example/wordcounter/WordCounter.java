@@ -48,7 +48,7 @@ public class WordCounter {
     public static void main(String[] args) {
         HashMap<Character, HashMap<String, Integer>> wordCounts = new HashMap<>();
         for (Character letter: aplhabet.toCharArray()) {
-            wordCounts.put(letter, null);
+            wordCounts.put(letter, new HashMap<>());
         }
         ArrayList<String> contents = null;
 
@@ -73,11 +73,6 @@ public class WordCounter {
             for (String word: temp) {
                 var firstLetter = word.charAt(0);
                 var letterBox = wordCounts.get(firstLetter);
-                if (letterBox == null) {
-                    wordCounts.put(firstLetter, new HashMap<>());
-                    letterBox = wordCounts.get(firstLetter);
-                }
-
                 var count = letterBox.getOrDefault(word, 0);
                 letterBox.put(word, count + 1);
             }
